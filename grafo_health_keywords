@@ -1,4 +1,4 @@
-#CRIANDO UM SUBGRAFO COM AS KEYWORDS
+#CRIANDO UM GRAFO COM AS KEYWORDS
 install.packages("dplyr")
 install.packages("tidyverse")
 install.packages("igraph")
@@ -27,8 +27,8 @@ ga_res_text_dv <- ga_res_text_dv[, new_order]
 # Exibe o dataframe reordenado
 View(ga_res_text_dv)
 
-# Lista de palavras-chave relacionadas à saúde ### SUGIRO TIRAR 'BACTERIOLOGICAL' E COLOCAR 'WORLD HEALTH ORGANIZATION' EM CAIXA BAIXA (RAFAEL)
-palavras_chave <- c("healthcare", "disease", "medicine", "epidemic", "pandemic", "World Health Organization", "immunodeficiency", "bacteriological", "pharmaceutical", "medical", "health insurance")
+# Lista de palavras-chave relacionadas à saúde
+palavras_chave <- c("healthcare", "disease", "medicine", "epidemic", "pandemic", "world health organization", "immunodeficiency", "pharmaceutical", "medical", "health insurance")
 
 
 # Criar a variável dummy "has_keyword"
@@ -43,7 +43,7 @@ total_has_keyword <- sum(ga_res_text_dv$has_keyword)
 
 # Criando um grafo com el + nl
 
-g_health_text <- graph_from_data_frame(ga_el, directed = F, vertices = ga_res_text_dv) #### MELHOR MANTER DIRECTED = T, DO CONTRÁRIO, COMO VOCÊ VAI SABER QUEM CITOU E QUEM FOI CITADO? (RAFAEL)
+g_health_text <- graph_from_data_frame(ga_el, directed = T, vertices = ga_res_text_dv) #### MELHOR MANTER DIRECTED = T, DO CONTRÁRIO, COMO VOCÊ VAI SABER QUEM CITOU E QUEM FOI CITADO? (RAFAEL)
 
 plot(g_health_text)
 
@@ -54,23 +54,26 @@ n_edges <- ecount(g_health_text)
 
 #DETECÇÃO DE COMUNIDADES
 
+# Criando uma cópia para aplicação do cluster Louvain
+u_health_text <-as.undirected(g_health_text) 
+
 # Aplicando louvain a g_s13
-cluster_louvain(g_health_text)
+cluster_louvain(u_health_text)
 
 # salvando o objeto communities
-comunidade_louvain <- cluster_louvain(g_health_text)
+comunidade_louvain <- cluster_louvain(u_health_text)
 comunidade_louvain
 # plotando
-plot(comunidade_louvain, g_health_text)
+plot(comunidade_louvain, u_health_text)
 
 # membresia
 comunidade_louvain$membership
-V(g_health_text)$name
+V(u_health_text)$name
 
 # salvando a membresia como atributo dos vertices e plotando
-V(g_health_text)$membresia_louvain <- comunidade_louvain$membership
+V(u_health_text)$membresia_louvain <- comunidade_louvain$membership
 
 View(g_health_text)
 
 # PARA TABULAR (RAFAEL)
-table(V(g_health_text)$membresia_louvain, V(g_health_text)$has_keyword)
+table(V(u_health_text)$membresia_louvain, V(g_health_text)$has_keyword
