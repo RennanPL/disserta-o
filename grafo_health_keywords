@@ -60,20 +60,57 @@ u_health_text <-as.undirected(g_health_text)
 # Aplicando louvain a g_s13
 cluster_louvain(u_health_text)
 
-# salvando o objeto communities
+# Salvando o objeto communities
 comunidade_louvain <- cluster_louvain(u_health_text)
 comunidade_louvain
 # plotando
 plot(comunidade_louvain, u_health_text)
 
-# membresia
+# Membresia
 comunidade_louvain$membership
 V(u_health_text)$name
 
-# salvando a membresia como atributo dos vertices e plotando
+# Salvando a membresia como atributo dos vertices e plotando
 V(u_health_text)$membresia_louvain <- comunidade_louvain$membership
 
 View(g_health_text)
 
-# PARA TABULAR (RAFAEL)
-table(V(u_health_text)$membresia_louvain, V(g_health_text)$has_keyword
+#TABULAÇÃO
+
+# Convertendo o grafo em um dataframe para análise
+vertices_df <- data.frame(
+  identificador = V(u_health_text)$name,
+  has_keyword = V(g_health_text)$has_keyword,
+  membresia_louvain = V(u_health_text)$membresia_louvain
+)
+
+# Criando uma tabela de contingência para explorar a relação entre has_keyword e a membresia
+tabela_contingencia <- vertices_df %>%
+  group_by(membresia_louvain, has_keyword) %>%
+  summarise(count = n(), .groups = 'drop')
+View(tabela_contingencia)
+
+# Agrupando por membresia de cluster e sumarizando o total de vértices com has_keyword=1 por cluster
+cluster_keyword_summary <- vertices_df %>%
+  group_by(membresia_louvain) %>%
+  summarise(total_has_keyword = sum(has_keyword)) %>%
+  ungroup()
+
+# Adicionando essa informação de volta ao dataframe original dos vértices
+# Isso criará uma coluna que indica, para cada vértice, o total de vértices no mesmo cluster que têm as keywords=1
+vertices_df <- vertices_df %>%
+  left_join(cluster_keyword_summary, by = "membresia_louvain")
+
+View(vertices_df)
+
+# Filtrando apenas os vértices com has_keyword=1 e contando por cluster
+top_clusters_keyword_count <- vertices_df %>%
+  filter(has_keyword == 1) %>%
+  group_by(membresia_louvain) %>%
+  summarise(count_has_keyword_1 = n()) %>%
+  ungroup() %>%
+  arrange(desc(count_has_keyword_1)) %>%
+  slice_head(n = 20) # Seleciona os 20 primeiros
+
+top_clusters_keyword_count
+
