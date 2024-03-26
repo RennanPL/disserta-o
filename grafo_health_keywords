@@ -114,3 +114,41 @@ top_clusters_keyword_count <- vertices_df %>%
 
 top_clusters_keyword_count
 
+# ANALISE QUALITATIVA
+
+# Vertices mais centrais dos clusters
+
+# Função para extrair os top 20 vértices mais centrais de clusters específicos
+get_top_central_vertices <- function(graph, cluster_id) {
+  vertices_in_cluster <- V(graph)[V(graph)$membresia_louvain == cluster_id]
+  subgraph <- induced_subgraph(graph, vertices_in_cluster)
+  degree_centrality <- degree(subgraph, mode = "all")
+  
+  # Atribuindo centralidade como atributo para facilitar a ordenação e filtragem
+  V(subgraph)$degree_centrality <- degree_centrality
+  
+  # Ordenando vértices pelo grau de centralidade e pegando os top 20
+  top_vertices <- head(V(subgraph)[order(-degree_centrality)], 20)
+  
+  return(data.frame(
+    identificador = top_vertices$name,
+    centralidade = top_vertices$degree_centrality
+  ))
+}
+
+# Clusters específicos de interesse
+clusters_of_interest <- c(27, 162, 20)
+
+# Loop para processar cada cluster e obter os vértices mais centrais
+results <- lapply(clusters_of_interest, function(cluster_id) {
+  get_top_central_vertices(u_health_text, cluster_id)
+})
+
+# Nomeando os elementos da lista para identificar os resultados por cluster
+names(results) <- paste("Cluster", clusters_of_interest)
+
+# Printando os resultados de acordo com cada cluster
+
+print(results$`Cluster 27`)
+print(results$`Cluster 162`)
+print(results$`Cluster 20`)
