@@ -1,0 +1,127 @@
+# Carregando os pacotes
+
+if (!requireNamespace("tm", quietly = TRUE)) install.packages("tm")
+if (!requireNamespace("wordcloud", quietly = TRUE)) install.packages("wordcloud")
+if (!requireNamespace("RColorBrewer", quietly = TRUE)) install.packages("RColorBrewer")
+
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+
+# CRIANDO NUVEM DE PALAVRAS
+
+# Importando o ga_res_text_dv
+load("/Users/rennanpl/r_intro/ga2022.RData")
+
+# Trazendo a coluna res_id2 para frente
+# Cria um vetor com os novos índices das colunas
+new_order <- c(4, 1:3, 5:ncol(ga_res_text_dv))
+
+# Reordena as colunas do dataframe conforme o novo vetor de índices
+ga_res_text_dv <- ga_res_text_dv[, new_order]
+
+# Criando a nuvem para o cluster 27
+
+# Códigos de resolução especificados
+res_codes <- c("217 a (iii)", "44/25", "2200 a (xxi)", "34/180", "2106 a (xx)", "55/25", 
+               "2625 (xxv)", "39/46", "61/106", "58/4", "45/158", "41/128", "es-10/15", 
+               "61/295", "64/293", "70/175", "58/292", "61/177", "65/229", "67/19")
+
+# Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+filtered_df <- ga_res_text_dv[ga_res_text_dv$res_id2 %in% res_codes, ]
+
+# Verificando se algum dos códigos de resolução não foi encontrado
+not_found_codes <- res_codes[!res_codes %in% filtered_df$res_id2]
+if (length(not_found_codes) > 0) {
+  cat("Os seguintes códigos de resolução não foram encontrados:", paste(not_found_codes, collapse=", "), "\n")
+}
+
+# Exibindo o res_id2 e o content_ed das resoluções filtradas
+# Isso vai exibir ou salvar em um objeto; ajuste conforme necessário para o seu uso
+print(filtered_df[, c("res_id2", "content_ed")])
+
+# Concatenando todos os textos das resoluções em uma única string
+texts <- paste(filtered_df$content_ed, collapse=" ")
+
+# Criando um corpus com o texto concatenado
+corpus <- Corpus(VectorSource(texts))
+
+# Limpando o texto
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+corpus <- tm_map(corpus, stripWhitespace)
+
+# Criando uma matriz de termos do documento (DTM)
+dtm <- TermDocumentMatrix(corpus)
+matrix <- as.matrix(dtm)
+word_freqs <- sort(rowSums(matrix), decreasing = TRUE)
+df_word_freqs <- data.frame(word=names(word_freqs), freq=word_freqs)
+
+# Gerando a nuvem de palavras
+set.seed(1234) # Para reproduzibilidade
+wordcloud(words = df_word_freqs$word, freq = df_word_freqs$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# Agora vamos fazer a mesma coisa para os outros dois clusters......
+
+# Cluster 162
+
+# Códigos de resolução para o cluster 162
+res_codes_162 <- c("55/2", "70/1", "60/1", "69/313", "57/270 b", "69/15", "63/239", 
+                   "53/199", "61/185", "60/265", "71/243", "46/151", "s-26/2", 
+                   "63/303", "66/288", "72/279", "56/210 b", "67/290", "57/7", "69/137")
+
+# Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+filtered_df_162 <- ga_res_text_dv[ga_res_text_dv$res_id2 %in% res_codes_162, ]
+
+# Processamento de texto e criação da nuvem de palavras
+texts_162 <- paste(filtered_df_162$content_ed, collapse=" ")
+corpus_162 <- Corpus(VectorSource(texts_162))
+corpus_162 <- tm_map(corpus_162, content_transformer(tolower))
+corpus_162 <- tm_map(corpus_162, removePunctuation)
+corpus_162 <- tm_map(corpus_162, removeNumbers)
+corpus_162 <- tm_map(corpus_162, removeWords, stopwords("english"))
+corpus_162 <- tm_map(corpus_162, stripWhitespace)
+dtm_162 <- TermDocumentMatrix(corpus_162)
+matrix_162 <- as.matrix(dtm_162)
+word_freqs_162 <- sort(rowSums(matrix_162), decreasing = TRUE)
+df_word_freqs_162 <- data.frame(word=names(word_freqs_162), freq=word_freqs_162)
+
+# Gerando a nuvem de palavras para o cluster 162
+set.seed(1234)
+wordcloud(words = df_word_freqs_162$word, freq = df_word_freqs_162$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# Cluster 20
+
+# Códigos de resolução para o cluster 20
+res_codes_20 <- c("1514 (xv)", "1541 (xv)", "2621 (xxv)", "2248 (s-v)", "2145 (xxi)", 
+                  "1970 (xviii)", "845 (ix)", "55/146", "74/270", "74/274", "35/118", 
+                  "46/181", "3103 (xxviii)", "65/119", "s-9/2", "2465 (xxiii)", 
+                  "es-8/2", "1654 (xvi)", "2548 (xxiv)", "1956 (xviii)")
+
+# Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+filtered_df_20 <- ga_res_text_dv[ga_res_text_dv$res_id2 %in% res_codes_20, ]
+
+# Processamento de texto e criação da nuvem de palavras
+texts_20 <- paste(filtered_df_20$content_ed, collapse=" ")
+corpus_20 <- Corpus(VectorSource(texts_20))
+corpus_20 <- tm_map(corpus_20, content_transformer(tolower))
+corpus_20 <- tm_map(corpus_20, removePunctuation)
+corpus_20 <- tm_map(corpus_20, removeNumbers)
+corpus_20 <- tm_map(corpus_20, removeWords, stopwords("english"))
+corpus_20 <- tm_map(corpus_20, stripWhitespace)
+dtm_20 <- TermDocumentMatrix(corpus_20)
+matrix_20 <- as.matrix(dtm_20)
+word_freqs_20 <- sort(rowSums(matrix_20), decreasing = TRUE)
+df_word_freqs_20 <- data.frame(word=names(word_freqs_20), freq=word_freqs_20)
+
+# Gerando a nuvem de palavras para o cluster 20
+set.seed(1234)
+wordcloud(words = df_word_freqs_20$word, freq = df_word_freqs_20$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
