@@ -152,3 +152,79 @@ names(results) <- paste("Cluster", clusters_of_interest)
 print(results$`Cluster 27`)
 print(results$`Cluster 162`)
 print(results$`Cluster 20`)
+
+# AJUSTE NO CÓDIGO PARA QUE ELE ME DEVOLVA OS CLUSTERS QUE POSSUEM UMA QUANTIDADE RELATIVA MAIOR DE RESOLUÇÕES DE SAÚDE
+
+# Adicionando uma coluna com a contagem total de vértices por cluster
+total_vertices_per_cluster <- vertices_df %>%
+  group_by(membresia_louvain) %>%
+  summarise(total_vertices = n(), .groups = 'drop')
+
+# Calculando a proporção de vértices com has_keyword=1 por cluster
+proporcao_keyword_por_cluster <- top_clusters_keyword_count %>%
+  left_join(total_vertices_per_cluster, by = "membresia_louvain") %>%
+  mutate(proportion = count_has_keyword_1 / total_vertices) %>%
+  arrange(desc(proportion)) %>%
+  select(membresia_louvain, proportion)
+
+# AJustando a seleção dos clusters para focar naqueles com maior proporção
+# ao invés de apenas o número absoluto de keywords
+top_clusters_by_proportion <- proporcao_keyword_por_cluster %>%
+  slice_head(n = 20) # Seleciona os 20 primeiros clusters com maior proporção
+
+# Visualizando os clusters com maior proporção de palavras-chave
+View(top_clusters_by_proportion)
+
+# Criação de mais duas colunas para que se possa observar o total de vértices dentro do cluster de modo a evitar a incidência de falsos-positivos.
+
+# Ajustando o dataframe
+
+# Primeiro, garantindo que temos o total de vértices (total de resoluções) e o total de has_keyword=1 (resoluções has_keyword)
+top_clusters_extended <- top_clusters_by_proportion %>%
+  left_join(cluster_keyword_summary, by = "membresia_louvain") %>%
+  left_join(total_vertices_per_cluster, by = "membresia_louvain")
+
+# Agora, top_clusters_extended tem as colunas adicionais desejadas
+View(top_clusters_extended)
+
+
+# Resgatando os vértices mais centrais dos 10 primeiros clusters.
+
+get_top_central_vertices_has_keyword <- function(graph, cluster_id) {
+  vertices_in_cluster <- V(graph)[V(graph)$membresia_louvain == cluster_id & V(graph)$has_keyword == 1]
+  subgraph <- induced_subgraph(graph, vertices_in_cluster)
+  degree_centrality <- degree(subgraph, mode = "all")
+  
+  # Atribuindo centralidade como atributo
+  V(subgraph)$degree_centrality <- degree_centrality
+  
+  # Ordenando e pegando os top 20 com has_keyword
+  top_vertices <- head(V(subgraph)[order(-degree_centrality)], 20)
+  
+  return(data.frame(
+    identificador = top_vertices$name,
+    centralidade = top_vertices$degree_centrality
+  ))
+}
+
+# Aplicando para os clusters de interesse
+clusters_of_interest_specific = c(1272, 162, 1792, 604, 1024, 27, 1346, 1502, 793, 141)
+
+results_specific <- lapply(clusters_of_interest_specific, function(cluster_id) {
+  get_top_central_vertices_has_keyword(u_health_text, cluster_id)
+})
+
+# Nomeando os elementos da lista para facilitar a identificação
+names(results_specific) <- paste("Cluster", clusters_of_interest_specific)
+
+# Resultados para cada cluster específico
+print(results_specific$`Cluster 1272`)
+print(results_specific$`Cluster 162`)
+print(results_specific$`Cluster 1792`)
+print(results_specific$`Cluster 604`)
+print(results_specific$`Cluster 1024`)
+print(results_specific$`Cluster 27`)
+print(results_specific$`Cluster 1346`)
+print(results_specific$`Cluster 1502`)
+print(results_specific$`Cluster 793`)
+print(results_specific$`Cluster 141`)
