@@ -1,0 +1,418 @@
+#NUVEM DE PALAVRAS APLICADAS AOS CLUSTERS PROPORCIONAIS
+
+# Importando o ga_res_text_dv
+load("/Users/rennanpl/r_intro/ga2022.RData")
+
+# Trazendo a coluna res_id2 para frente
+# Cria um vetor com os novos índices das colunas
+new_order <- c(4, 1:3, 5:ncol(ga_res_text_dv))
+
+# Reordena as colunas do dataframe conforme o novo vetor de índices
+ga_res_text_dv <- ga_res_text_dv[, new_order]
+
+# APLICANDO A NUVEM DE PALAVRAS NOS CLUSTERS COM MAIOR PROPORÇÃO DE HEALTH KEYWORDS EM RELAÇÃO AO TOTAL DE RESOLUÇÕES
+
+# Cluster 1272
+
+# Certifique-se de que as bibliotecas necessárias estão carregadas
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+
+# Códigos de resolução especificados para o cluster 1272
+res_codes_1272 <- c("48/96", "49/153", "38/111", "48/95", "48/99", "2856 (xxvi)", 
+                    "3447 (xxx)", "35/130 b", "36/56 b", "37/53", "37/188", 
+                    "47/88", "65/186", "39/132", "40/110", "41/114", "42/98", 
+                    "43/109", "64/131", "66/124")
+
+# Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+filtered_df_1272 <- ga_res_text_dv[ga_res_text_dv$res_id2 %in% res_codes_1272, ]
+
+# Concatenando todos os textos das resoluções em uma única string
+texts_1272 <- paste(filtered_df_1272$content_ed, collapse=" ")
+
+# Criando um corpus com o texto concatenado
+corpus_1272 <- Corpus(VectorSource(texts_1272))
+
+# Limpando o texto
+corpus_1272 <- tm_map(corpus_1272, content_transformer(tolower))
+corpus_1272 <- tm_map(corpus_1272, removePunctuation)
+corpus_1272 <- tm_map(corpus_1272, removeNumbers)
+corpus_1272 <- tm_map(corpus_1272, removeWords, stopwords("english"))
+corpus_1272 <- tm_map(corpus_1272, stripWhitespace)
+
+# Criando uma matriz de termos do documento (DTM)
+dtm_1272 <- TermDocumentMatrix(corpus_1272)
+matrix_1272 <- as.matrix(dtm_1272)
+word_freqs_1272 <- sort(rowSums(matrix_1272), decreasing = TRUE)
+df_word_freqs_1272 <- data.frame(word=names(word_freqs_1272), freq=word_freqs_1272)
+
+# Gerando a nuvem de palavras
+set.seed(1234) # Para reproduzibilidade
+wordcloud(words = df_word_freqs_1272$word, freq = df_word_freqs_1272$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# Adicionando título
+title(paste("Nuvem de Palavras do Cluster 1272"))
+
+# Cluster 162
+
+# Códigos de resolução especificados para o cluster 162
+res_codes_162 <- c("70/1", "69/313", "55/2", "60/1", "69/15", "s-26/2", "66/2",
+                   "59/213", "60/265", "63/310", "75/233", "71/159", "73/336",
+                   "72/139", "72/233", "46/151", "61/296", "66/288", "69/290",
+                   "63/303")
+
+# Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+filtered_df_162 <- ga_res_text_dv[ga_res_text_dv$res_id2 %in% res_codes_162, ]
+
+# Concatenando todos os textos das resoluções em uma única string
+texts_162 <- paste(filtered_df_162$content_ed, collapse=" ")
+
+# Criando um corpus com o texto concatenado
+corpus_162 <- Corpus(VectorSource(texts_162))
+
+# Limpando o texto
+corpus_162 <- tm_map(corpus_162, content_transformer(tolower))
+corpus_162 <- tm_map(corpus_162, removePunctuation)
+corpus_162 <- tm_map(corpus_162, removeNumbers)
+corpus_162 <- tm_map(corpus_162, removeWords, stopwords("english"))
+corpus_162 <- tm_map(corpus_162, stripWhitespace)
+
+# Criando uma matriz de termos do documento (DTM)
+dtm_162 <- TermDocumentMatrix(corpus_162)
+matrix_162 <- as.matrix(dtm_162)
+word_freqs_162 <- sort(rowSums(matrix_162), decreasing = TRUE)
+df_word_freqs_162 <- data.frame(word=names(word_freqs_162), freq=word_freqs_162)
+
+# Gerando a nuvem de palavras
+set.seed(1234) # Para reproduzibilidade
+wordcloud(words = df_word_freqs_162$word, freq = df_word_freqs_162$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# Adicionando título
+title(paste("Nuvem de Palavras do Cluster 162"))
+
+# Cluster 1792
+
+
+# Códigos de resolução especificados para o cluster 1792
+res_codes_1792 <- c("66/253 a", "66/253 b", "67/183", "67/262", "70/234", "73/182",
+                    "74/169", "77/230", "68/182", "69/189", "71/130", "71/203",
+                    "75/193", "76/228", "72/191", "73/137", "76/29", "77/73")
+
+# Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+filtered_df_1792 <- ga_res_text_dv[ga_res_text_dv$res_id2 %in% res_codes_1792, ]
+
+# Concatenando todos os textos das resoluções em uma única string
+texts_1792 <- paste(filtered_df_1792$content_ed, collapse=" ")
+
+# Criando um corpus com o texto concatenado
+corpus_1792 <- Corpus(VectorSource(texts_1792))
+
+# Limpando o texto
+corpus_1792 <- tm_map(corpus_1792, content_transformer(tolower))
+corpus_1792 <- tm_map(corpus_1792, removePunctuation)
+corpus_1792 <- tm_map(corpus_1792, removeNumbers)
+corpus_1792 <- tm_map(corpus_1792, removeWords, stopwords("english"))
+corpus_1792 <- tm_map(corpus_1792, stripWhitespace)
+
+# Criando uma matriz de termos do documento (DTM)
+dtm_1792 <- TermDocumentMatrix(corpus_1792)
+matrix_1792 <- as.matrix(dtm_1792)
+word_freqs_1792 <- sort(rowSums(matrix_1792), decreasing = TRUE)
+df_word_freqs_1792 <- data.frame(word=names(word_freqs_1792), freq=word_freqs_1792)
+
+# Gerando a nuvem de palavras
+set.seed(1234) # Para reproduzibilidade
+wordcloud(words = df_word_freqs_1792$word, freq = df_word_freqs_1792$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# Adicionando título
+title(paste("Nuvem de Palavras do Cluster 1792"))
+
+# Cluster 604
+
+# Códigos de resolução especificados para o cluster 604
+res_codes_604 <- c("66/70", "72/76", "73/261", "71/89", "76/75", "68/73",
+                   "69/84", "70/81", "74/81", "75/91", "3410 (xxx)", "65/96",
+                   "67/112", "3226 (xxix)", "31/10", "52/55", "53/44",
+                   "1376 (xiv)", "1764 (xvii)", "2773 (xxvi)")
+
+# Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+filtered_df_604 <- ga_res_text_dv[ga_res_text_dv$res_id2 %in% res_codes_604, ]
+
+# Concatenando todos os textos das resoluções em uma única string
+texts_604 <- paste(filtered_df_604$content_ed, collapse=" ")
+
+# Criando um corpus com o texto concatenado
+corpus_604 <- Corpus(VectorSource(texts_604))
+
+# Limpando o texto
+corpus_604 <- tm_map(corpus_604, content_transformer(tolower))
+corpus_604 <- tm_map(corpus_604, removePunctuation)
+corpus_604 <- tm_map(corpus_604, removeNumbers)
+corpus_604 <- tm_map(corpus_604, removeWords, stopwords("english"))
+corpus_604 <- tm_map(corpus_604, stripWhitespace)
+
+# Criando uma matriz de termos do documento (DTM)
+dtm_604 <- TermDocumentMatrix(corpus_604)
+matrix_604 <- as.matrix(dtm_604)
+word_freqs_604 <- sort(rowSums(matrix_604), decreasing = TRUE)
+df_word_freqs_604 <- data.frame(word=names(word_freqs_604), freq=word_freqs_604)
+
+# Gerando a nuvem de palavras
+set.seed(1234) # Para reproduzibilidade
+wordcloud(words = df_word_freqs_604$word, freq = df_word_freqs_604$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# Adicionando título
+title(paste("Nuvem de Palavras do Cluster 604"))
+
+# Cluster 1024
+
+# Códigos de resolução especificados para o cluster 1024
+res_codes_1024 <- c("32/99", "34/121", "36/217", "36/208", "37/151", "37/158",
+                    "38/205", "38/210", "38/219", "39/185", "39/192", "40/222",
+                    "2816 (xxvi)", "36/211", "37/145", "37/152", "37/176",
+                    "38/89", "38/208", "38/211")
+
+# Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+filtered_df_1024 <- ga_res_text_dv[ga_res_text_dv$res_id2 %in% res_codes_1024, ]
+
+# Concatenando todos os textos das resoluções em uma única string
+texts_1024 <- paste(filtered_df_1024$content_ed, collapse=" ")
+
+# Criando um corpus com o texto concatenado
+corpus_1024 <- Corpus(VectorSource(texts_1024))
+
+# Limpando o texto
+corpus_1024 <- tm_map(corpus_1024, content_transformer(tolower))
+corpus_1024 <- tm_map(corpus_1024, removePunctuation)
+corpus_1024 <- tm_map(corpus_1024, removeNumbers)
+corpus_1024 <- tm_map(corpus_1024, removeWords, stopwords("english"))
+corpus_1024 <- tm_map(corpus_1024, stripWhitespace)
+
+# Criando uma matriz de termos do documento (DTM)
+dtm_1024 <- TermDocumentMatrix(corpus_1024)
+matrix_1024 <- as.matrix(dtm_1024)
+word_freqs_1024 <- sort(rowSums(matrix_1024), decreasing = TRUE)
+df_word_freqs_1024 <- data.frame(word=names(word_freqs_1024), freq=word_freqs_1024)
+
+# Gerando a nuvem de palavras
+set.seed(1234) # Para reproduzibilidade
+wordcloud(words = df_word_freqs_1024$word, freq = df_word_freqs_1024$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# Adicionando título
+title(paste("Nuvem de Palavras do Cluster 1024"))
+
+# Cluster 27
+
+# Códigos de resolução especificados para o cluster 27
+res_codes_27 <- c("217 a (iii)", "44/25", "2200 a (xxi)", "61/106", "55/25", 
+                  "61/295", "39/46", "2106 a (xx)", "70/175", "45/158", 
+                  "64/293", "65/229", "71/1", "es-10/18", "77/237", 
+                  "61/177", "s-27/2", "69/2", "76/187", "43/173")
+
+# Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+filtered_df_27 <- ga_res_text_dv[ga_res_text_dv$res_id2 %in% res_codes_27, ]
+
+# Concatenando todos os textos das resoluções em uma única string
+texts_27 <- paste(filtered_df_27$content_ed, collapse=" ")
+
+# Criando um corpus com o texto concatenado
+corpus_27 <- Corpus(VectorSource(texts_27))
+
+# Limpando o texto
+corpus_27 <- tm_map(corpus_27, content_transformer(tolower))
+corpus_27 <- tm_map(corpus_27, removePunctuation)
+corpus_27 <- tm_map(corpus_27, removeNumbers)
+corpus_27 <- tm_map(corpus_27, removeWords, stopwords("english"))
+corpus_27 <- tm_map(corpus_27, stripWhitespace)
+
+# Criando uma matriz de termos do documento (DTM)
+dtm_27 <- TermDocumentMatrix(corpus_27)
+matrix_27 <- as.matrix(dtm_27)
+word_freqs_27 <- sort(rowSums(matrix_27), decreasing = TRUE)
+df_word_freqs_27 <- data.frame(word=names(word_freqs_27), freq=word_freqs_27)
+
+# Gerando a nuvem de palavras
+set.seed(1234) # Para reproduzibilidade
+wordcloud(words = df_word_freqs_27$word, freq = df_word_freqs_27$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# Adicionando título
+title(paste("Nuvem de Palavras do Cluster 27"))
+
+# Cluster 1346
+
+# Cluster 1346
+
+# Verificando se as bibliotecas necessárias estão instaladas e carregando-as
+if (!requireNamespace("tm", quietly = TRUE)) install.packages("tm")
+if (!requireNamespace("wordcloud", quietly = TRUE)) install.packages("wordcloud")
+if (!requireNamespace("RColorBrewer", quietly = TRUE)) install.packages("RColorBrewer")
+
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+
+# Códigos de resolução especificados para o cluster 1346
+res_codes_1346 <- c("68/134", "69/146", "71/164", "72/144", "74/125", "77/190",
+                    "73/143", "75/131", "75/152", "76/138", "46/91", "54/24",
+                    "56/126", "57/177", "3137 (xxviii)", "39/25")
+
+# Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+filtered_df_1346 <- ga_res_text_dv[ga_res_text_dv$res_id2 %in% res_codes_1346, ]
+
+# Concatenando todos os textos das resoluções em uma única string
+texts_1346 <- paste(filtered_df_1346$content_ed, collapse=" ")
+
+# Criando um corpus com o texto concatenado
+corpus_1346 <- Corpus(VectorSource(texts_1346))
+
+# Limpando o texto
+corpus_1346 <- tm_map(corpus_1346, content_transformer(tolower))
+corpus_1346 <- tm_map(corpus_1346, removePunctuation)
+corpus_1346 <- tm_map(corpus_1346, removeNumbers)
+corpus_1346 <- tm_map(corpus_1346, removeWords, stopwords("english"))
+corpus_1346 <- tm_map(corpus_1346, stripWhitespace)
+
+# Criando uma matriz de termos do documento (DTM)
+dtm_1346 <- TermDocumentMatrix(corpus_1346)
+matrix_1346 <- as.matrix(dtm_1346)
+word_freqs_1346 <- sort(rowSums(matrix_1346), decreasing = TRUE)
+df_word_freqs_1346 <- data.frame(word=names(word_freqs_1346), freq=word_freqs_1346)
+
+# Gerando a nuvem de palavras
+set.seed(1234) # Para reproduzibilidade
+wordcloud(words = df_word_freqs_1346$word, freq = df_word_freqs_1346$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# Adicionando título
+title(paste("Nuvem de Palavras do Cluster 1346"))
+
+# Cluster 1502
+
+# Códigos de resolução especificados para o cluster 1502
+res_codes_1502 <- c("46/182", "54/192", "55/175", "61/220", "64/75", "67/84",
+                    "70/105", "47/168", "53/87", "56/217", "57/155", "58/122",
+                    "73/138", "49/215", "50/82", "51/194", "52/126", "76/125",
+                    "53/1 o", "49/21 k")
+
+# Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+filtered_df_1502 <- ga_res_text_dv[ga_res_text_dv$res_id2 %in% res_codes_1502, ]
+
+# Concatenando todos os textos das resoluções em uma única string
+texts_1502 <- paste(filtered_df_1502$content_ed, collapse=" ")
+
+# Criando um corpus com o texto concatenado
+corpus_1502 <- Corpus(VectorSource(texts_1502))
+
+# Limpando o texto
+corpus_1502 <- tm_map(corpus_1502, content_transformer(tolower))
+corpus_1502 <- tm_map(corpus_1502, removePunctuation)
+corpus_1502 <- tm_map(corpus_1502, removeNumbers)
+corpus_1502 <- tm_map(corpus_1502, removeWords, stopwords("english"))
+corpus_1502 <- tm_map(corpus_1502, stripWhitespace)
+
+# Criando uma matriz de termos do documento (DTM)
+dtm_1502 <- TermDocumentMatrix(corpus_1502)
+matrix_1502 <- as.matrix(dtm_1502)
+word_freqs_1502 <- sort(rowSums(matrix_1502), decreasing = TRUE)
+df_word_freqs_1502 <- data.frame(word=names(word_freqs_1502), freq=word_freqs_1502)
+
+# Gerando a nuvem de palavras
+set.seed(1234) # Para reproduzibilidade
+wordcloud(words = df_word_freqs_1502$word, freq = df_word_freqs_1502$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# Adicionando título
+title(paste("Nuvem de Palavras do Cluster 1502"))
+
+# Cluster 793
+
+# Códigos de resolução especificados para o cluster 793
+res_codes_793 <- c("61/111", "62/217", "71/90", "50/27", "65/97", "69/85",
+                   "73/91", "70/82", "74/82", "76/76", "77/121", "72/77",
+                   "52/56", "55/122", "57/116", "58/89", "56/51", "63/90",
+                   "64/86", "77/120")
+
+# Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+filtered_df_793 <- ga_res_text_dv[ga_res_text_dv$res_id2 %in% res_codes_793, ]
+
+# Concatenando todos os textos das resoluções em uma única string
+texts_793 <- paste(filtered_df_793$content_ed, collapse=" ")
+
+# Criando um corpus com o texto concatenado
+corpus_793 <- Corpus(VectorSource(texts_793))
+
+# Limpando o texto
+corpus_793 <- tm_map(corpus_793, content_transformer(tolower))
+corpus_793 <- tm_map(corpus_793, removePunctuation)
+corpus_793 <- tm_map(corpus_793, removeNumbers)
+corpus_793 <- tm_map(corpus_793, removeWords, stopwords("english"))
+corpus_793 <- tm_map(corpus_793, stripWhitespace)
+
+# Criando uma matriz de termos do documento (DTM)
+dtm_793 <- TermDocumentMatrix(corpus_793)
+matrix_793 <- as.matrix(dtm_793)
+word_freqs_793 <- sort(rowSums(matrix_793), decreasing = TRUE)
+df_word_freqs_793 <- data.frame(word=names(word_freqs_793), freq=word_freqs_793)
+
+# Gerando a nuvem de palavras
+set.seed(1234) # Para reproduzibilidade
+wordcloud(words = df_word_freqs_793$word, freq = df_word_freqs_793$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# Adicionando título
+title(paste("Nuvem de Palavras do Cluster 793"))
+
+# Cluster 141
+
+# Códigos de resolução especificados para o cluster 141
+res_codes_141 <- c("50/81", "62/126", "45/103", "56/113", "59/147", "76/139",
+                   "77/191", "47/92", "48/100", "53/28", "56/117", "58/133",
+                   "64/130", "66/121", "68/130", "70/127", "72/146", "75/1",
+                   "76/83", "77/127")
+
+# Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+filtered_df_141 <- ga_res_text_dv[ga_res_text_dv$res_id2 %in% res_codes_141, ]
+
+# Concatenando todos os textos das resoluções em uma única string
+texts_141 <- paste(filtered_df_141$content_ed, collapse=" ")
+
+# Criando um corpus com o texto concatenado
+corpus_141 <- Corpus(VectorSource(texts_141))
+
+# Limpando o texto
+corpus_141 <- tm_map(corpus_141, content_transformer(tolower))
+corpus_141 <- tm_map(corpus_141, removePunctuation)
+corpus_141 <- tm_map(corpus_141, removeNumbers)
+corpus_141 <- tm_map(corpus_141, removeWords, stopwords("english"))
+corpus_141 <- tm_map(corpus_141, stripWhitespace)
+
+# Criando uma matriz de termos do documento (DTM)
+dtm_141 <- TermDocumentMatrix(corpus_141)
+matrix_141 <- as.matrix(dtm_141)
+word_freqs_141 <- sort(rowSums(matrix_141), decreasing = TRUE)
+df_word_freqs_141 <- data.frame(word=names(word_freqs_141), freq=word_freqs_141)
+
+# Gerando a nuvem de palavras
+set.seed(1234) # Para reproduzibilidade
+wordcloud(words = df_word_freqs_141$word, freq = df_word_freqs_141$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# Adicionando título
+title(paste("Nuvem de Palavras do Cluster 141"))
