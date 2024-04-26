@@ -1,8 +1,12 @@
-# Carregando os pacotes
+# CONSTRUINDO A NUVEM DE PALAVRAS
 
-if (!requireNamespace("tm", quietly = TRUE)) install.packages("tm")
-if (!requireNamespace("wordcloud", quietly = TRUE)) install.packages("wordcloud")
-if (!requireNamespace("RColorBrewer", quietly = TRUE)) install.packages("RColorBrewer")
+# Carregando os pacotes
+If(require(tm) == F install.packages('tm'); 
+require(tm);
+If(require(wordcloud) == F install.packages('wordcloud'); 
+require(wordcloud);
+If(require(RColorBrewer) == F install.packages('RColorBrewer'); 
+require(RColorBrewer);
 
 library(tm)
 library(wordcloud)
