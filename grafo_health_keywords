@@ -1,13 +1,16 @@
 #CRIANDO UM GRAFO COM AS KEYWORDS
-install.packages("dplyr")
-install.packages("tidyverse")
-install.packages("igraph")
-install.packages("tidyr")
-library('igraph')
-library('tidyverse')
-getwd() 
-library(dplyr)
-library(tidyr)
+
+# Carregando pacotes
+if(require(dplyr) == F) install.packages('dplyr');
+require(dplyr);
+if(require(tidyverse) == F) install.packages('tidyverse');
+require(tidyverse);
+if(require(igraph) == F) install.packages('igraph');
+require(igraph);
+if(require(tidyr) == F) install.packages('tidyr');
+require(tidyr);
+
+# Agora vamos criar o grafo!
 
 # Importando a node list e a edge list
 load("/Users/rennanpl/r_intro/ga2022.RData")
