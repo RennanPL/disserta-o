@@ -10,6 +10,9 @@ require(igraph);
 if(require(tidyr) == F) install.packages('tidyr');
 require(tidyr);
 
+# Definindo a semente para reprodutibilidade
+set.seed(123)
+
 # Agora vamos criar o grafo!
 
 # Importando a node list e a edge list
