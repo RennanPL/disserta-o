@@ -8,6 +8,9 @@ require(wordcloud);
 If(require(RColorBrewer) == F install.packages('RColorBrewer'); 
 require(RColorBrewer);
 
+# Definindo a semente para reprodutibilidade
+set.seed(123)
+
 # A ideia agora é extrair os clusters que possuem uma maior quantidade de resoluções de saúde em relação ao todo!
 
 # Importando o ga_res_text_dv
