@@ -1,4 +1,4 @@
-# RESGATANDO OS VÉRTICES PRINCIPAIS DOS TOP 10 PRIMEIROS CLUSTERS /// Vinculado ao cluster_keywords_proportional
+# RESGATANDO OS VÉRTICES PRINCIPAIS DOS TOP 10 PRIMEIROS CLUSTERS /// Vinculado ao health_keywords_proportional
 
 get_top_central_vertices_has_keyword <- function(graph, cluster_id) {
   vertices_in_cluster <- V(graph)[V(graph)$membresia_louvain == cluster_id & V(graph)$has_keyword == 1]
