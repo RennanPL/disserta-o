@@ -1,4 +1,4 @@
-#NUVEM DE PALAVRAS APLICADAS AOS CLUSTERS PROPORCIONAIS
+#NUVEM DE PALAVRAS APLICADAS AOS CLUSTERS PROPORCIONAIS /// Vinculado ao health_keywords_proportional
 
 # Carregando os pacotes
 If(require(tm) == F install.packages('tm'); 
