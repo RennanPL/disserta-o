@@ -1,3 +1,5 @@
+# CRIANDO UMA TABELA COM UM RANKING DE CLUSTERS QUE POSSUEM A MAIOR QUANTIDADE DE VERTICES COM PALAVRAS-CHAVE EM RELAÇÃO AO TOTAL DE VÉRTICES
+
 # Carregando pacotes
 if(require(dplyr) == F) install.packages('dplyr');
 require(dplyr);
