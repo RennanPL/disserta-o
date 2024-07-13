@@ -1,0 +1,40 @@
+# RESGATANDO OS VÉRTICES PRINCIPAIS DOS TOP 10 PRIMEIROS CLUSTERS /// Vinculado ao cluster_keywords_proportional
+
+get_top_central_vertices_has_keyword <- function(graph, cluster_id) {
+  vertices_in_cluster <- V(graph)[V(graph)$membresia_louvain == cluster_id & V(graph)$has_keyword == 1]
+  subgraph <- induced_subgraph(graph, vertices_in_cluster)
+  degree_centrality <- degree(subgraph, mode = "all")
+  
+  # Atribuindo centralidade como atributo
+  V(subgraph)$degree_centrality <- degree_centrality
+  
+  # Ordenando e pegando os top 20 com has_keyword
+  top_vertices <- head(V(subgraph)[order(-degree_centrality)], 20)
+  
+  return(data.frame(
+    identificador = top_vertices$name,
+    centralidade = top_vertices$degree_centrality
+  ))
+}
+
+# Aplicando para os clusters de interesse
+clusters_of_interest_specific = c(1272, 162, 1792, 604, 1024, 27, 1346, 1502, 793, 141)
+
+results_specific <- lapply(clusters_of_interest_specific, function(cluster_id) {
+  get_top_central_vertices_has_keyword(u_health_text, cluster_id)
+})
+
+# Nomeando os elementos da lista para facilitar a identificação
+names(results_specific) <- paste("Cluster", clusters_of_interest_specific)
+
+# Resultados para cada cluster específico
+print(results_specific$`Cluster 1272`)
+print(results_specific$`Cluster 162`)
+print(results_specific$`Cluster 1792`)
+print(results_specific$`Cluster 604`)
+print(results_specific$`Cluster 1024`)
+print(results_specific$`Cluster 27`)
+print(results_specific$`Cluster 1346`)
+print(results_specific$`Cluster 1502`)
+print(results_specific$`Cluster 793`)
+print(results_specific$`Cluster 141`)
