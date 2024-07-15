@@ -1,0 +1,58 @@
+# Carregando pacotes
+if (!require(tm)) install.packages('tm'); library(tm)
+if (!require(wordcloud)) install.packages('wordcloud'); library(wordcloud)
+if (!require(RColorBrewer)) install.packages('RColorBrewer'); library(RColorBrewer)
+
+# Definindo a semente para reprodutibilidade
+set.seed(123)
+
+# Importando o ga_res_text_dv
+load("/Users/rennanpl/r_intro/ga2022.RData")
+
+# Trazendo a coluna res_id2 para frente
+# Cria um vetor com os novos índices das colunas
+new_order <- c(4, 1:3, 5:ncol(ga_res_text_dv))
+
+# Reordena as colunas do dataframe conforme o novo vetor de índices
+ga_res_text_dv <- ga_res_text_dv[, new_order]
+
+# Função para criar nuvem de palavras para um cluster específico
+criar_nuvem_palavras <- function(cluster_code, cluster_name) {
+  # Filtrando o dataframe para as linhas que contêm os códigos de resolução especificados
+  filtered_df <- ga_res_text_dv[ga_res_text_dv$membresia_louvain == cluster_code, ]
+  
+  # Concatenando todos os textos das resoluções em uma única string
+  texts <- paste(filtered_df$content_ed, collapse=" ")
+  
+  # Criando um corpus com o texto concatenado
+  corpus <- Corpus(VectorSource(texts))
+  
+  # Limpando o texto
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, removeWords, stopwords("english"))
+  corpus <- tm_map(corpus, stripWhitespace)
+  
+  # Criando uma matriz de termos do documento (DTM)
+  dtm <- TermDocumentMatrix(corpus)
+  matrix <- as.matrix(dtm)
+  word_freqs <- sort(rowSums(matrix), decreasing = TRUE)
+  df_word_freqs <- data.frame(word=names(word_freqs), freq=word_freqs)
+  
+  # Gerando a nuvem de palavras
+  set.seed(1234) # Para reproduzibilidade
+  wordcloud(words = df_word_freqs$word, freq = df_word_freqs$freq, min.freq = 1,
+            max.words=200, random.order=FALSE, rot.per=0.35, 
+            colors=brewer.pal(8, "Dark2"))
+  
+  # Adicionando título
+  title(paste("Nuvem de Palavras do Cluster", cluster_name))
+}
+
+# Aplicando a função aos clusters específicos
+criar_nuvem_palavras(163, "163")
+criar_nuvem_palavras(29, "29")
+criar_nuvem_palavras(1347, "1347")
+criar_nuvem_palavras(1026, "1026")
+criar_nuvem_palavras(817, "817")
