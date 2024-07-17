@@ -1,0 +1,159 @@
+# CÓDIGO PARA IDENTIFICAÇÃO DOS CLUSTERS EM DIFERENTES RODADAS
+
+# A idéia aqui é analisar o ranking dos clusters proporcionalizados em várias rodadas com diferentes seeds de modo a perceber quais os padrões que mais se repetem
+
+# Carregando pacotes
+if(require(dplyr) == F) install.packages('dplyr');
+require(dplyr);
+if(require(tidyverse) == F) install.packages('tidyverse');
+require(tidyverse);
+if(require(igraph) == F) install.packages('igraph');
+require(igraph);
+if(require(tidyr) == F) install.packages('tidyr');
+require(tidyr);
+
+# Definindo a semente para reprodutibilidade
+set.seed(477)
+
+# Agora vamos criar o grafo!
+
+# Importando a node list e a edge list
+load("/Users/rennanpl/r_intro/ga2022.RData")
+
+# Construindo um grafo a partir do dataframe da edge
+g_ga_el <- graph_from_data_frame(ga_el, directed = F)
+
+# Trazendo a coluna res_id2 para frente
+# Cria um vetor com os novos índices das colunas
+new_order <- c(4, 1:3, 5:ncol(ga_res_text_dv))
+
+# Reordena as colunas do dataframe conforme o novo vetor de índices
+ga_res_text_dv <- ga_res_text_dv[, new_order]
+
+# Lista de palavras-chave relacionadas à saúde
+palavras_chave <- c("healthcare", "disease", "medicine", "epidemic", "pandemic", "world health organization", "immunodeficiency", "pharmaceutical", "medical", "health insurance")
+
+# Criar a variável dummy "has_keyword"
+ga_res_text_dv <- ga_res_text_dv %>%
+  mutate(has_keyword = ifelse(
+    grepl(paste(palavras_chave, collapse = "|"), content_ed, ignore.case = TRUE),
+    1, 0
+  ))
+
+# Contando quantas células contêm pelo menos uma keyword
+total_has_keyword <- sum(ga_res_text_dv$has_keyword)
+
+# Criando um grafo com el + nl
+g_health_text <- graph_from_data_frame(ga_el, directed = T, vertices = ga_res_text_dv) 
+
+# Checagem do número de arestas e de nós
+n_nodes <- vcount(g_health_text)
+n_edges <- ecount(g_health_text)
+
+#DETECÇÃO DE COMUNIDADES
+
+# Criando uma cópia para aplicação do cluster Louvain
+u_health_text <-as.undirected(g_health_text) 
+
+# Aplicando louvain a g_s13
+cluster_louvain(u_health_text)
+
+# Salvando o objeto communities
+comunidade_louvain <- cluster_louvain(u_health_text)
+
+# Membresia
+comunidade_louvain$membership
+V(u_health_text)$name
+
+# Salvando a membresia como atributo dos vertices
+V(u_health_text)$membresia_louvain <- comunidade_louvain$membership
+
+#TABULAÇÃO
+
+# Convertendo o grafo em um dataframe para análise
+vertices_df <- data.frame(
+  identificador = V(u_health_text)$name,
+  has_keyword = V(g_health_text)$has_keyword,
+  membresia_louvain = V(u_health_text)$membresia_louvain
+)
+
+# Criando uma tabela de contingência para explorar a relação entre has_keyword e a membresia
+tabela_contingencia <- vertices_df %>%
+  group_by(membresia_louvain, has_keyword) %>%
+  summarise(count = n(), .groups = 'drop')
+View(tabela_contingencia)
+
+# Agrupando por membresia de cluster e sumarizando o total de vértices com has_keyword=1 por cluster
+cluster_keyword_summary <- vertices_df %>%
+  group_by(membresia_louvain) %>%
+  summarise(total_has_keyword = sum(has_keyword)) %>%
+  ungroup()
+
+# Adicionando essa informação de volta ao dataframe original dos vértices
+
+# Isso criará uma coluna que indica, para cada vértice, o total de vértices no mesmo cluster que têm as keywords=1
+vertices_df <- vertices_df %>%
+  left_join(cluster_keyword_summary, by = "membresia_louvain")
+
+# Filtrando apenas os vértices com has_keyword=1 e contando por cluster
+top_clusters_keyword_count <- vertices_df %>%
+  filter(has_keyword == 1) %>%
+  group_by(membresia_louvain) %>%
+  summarise(count_has_keyword_1 = n()) %>%
+  ungroup() %>%
+  arrange(desc(count_has_keyword_1)) %>%
+  slice_head(n = 20) # Seleciona os 20 primeiros
+
+top_clusters_keyword_count
+
+# AJUSTE PARA OBTER OS CLUSTERS QUE POSSUEM UMA QUANTIDADE RELATIVA MAIOR DE RESOLUÇÕES DE SAÚDE
+
+# Adicionando uma coluna com a contagem total de vértices por cluster
+total_vertices_per_cluster <- vertices_df %>%
+  group_by(membresia_louvain) %>%
+  summarise(total_vertices = n(), .groups = 'drop')
+
+# Calculando a proporção de vértices com has_keyword=1 por cluster
+proporcao_keyword_por_cluster <- top_clusters_keyword_count %>%
+  left_join(total_vertices_per_cluster, by = "membresia_louvain") %>%
+  mutate(proportion = count_has_keyword_1 / total_vertices) %>%
+  arrange(desc(proportion)) %>%
+  select(membresia_louvain, proportion)
+
+# AJustando a seleção dos clusters para focar naqueles com maior proporção
+# ao invés de apenas o número absoluto de keywords
+top_clusters_by_proportion <- proporcao_keyword_por_cluster %>%
+  slice_head(n = 20) # Seleciona os 20 primeiros clusters com maior proporção
+
+# Visualizando os clusters com maior proporção de palavras-chave
+View(top_clusters_by_proportion)
+
+# Criação de mais duas colunas para que se possa observar o total de vértices dentro do cluster de modo a evitar a incidência de falsos-positivos.
+
+# Ajustando o dataframe
+
+# Primeiro, garantindo que temos o total de vértices (total de resoluções) e o total de has_keyword=1 (resoluções has_keyword)
+top_clusters_extended <- top_clusters_by_proportion %>%
+  left_join(cluster_keyword_summary, by = "membresia_louvain") %>%
+  left_join(total_vertices_per_cluster, by = "membresia_louvain")
+
+# Agora, top_clusters_extended tem as colunas adicionais desejadas
+View(top_clusters_extended)
+
+
+
+# PROCURANDO ONDE QUE TÁ O CLUSTER PCD
+documento_cluster_1 <- vertices_df %>%
+  filter(identificador == "48/96")
+
+print(documento_cluster_1)
+
+documento_cluster_2 <- vertices_df %>%
+  filter(identificador == "49/153")
+
+print(documento_cluster_2)
+
+documento_cluster_3 <- vertices_df %>%
+  filter(identificador == "38/111")
+
+print(documento_cluster_3)
