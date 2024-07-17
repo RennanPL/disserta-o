@@ -1,0 +1,134 @@
+# CRIAÇÃO DE UMA TABELA COM UM RANKING DOS  CLUSTERS QUE POSSUEM UMA MAIOR QUANTIDADE DE PALAVRAS-CHAVE DENTRO DO CORPUS DE SEUS DOCUMENTOS
+
+
+# Carregando pacotes
+if(require(dplyr) == F) install.packages('dplyr')
+require(dplyr)
+if(require(tidyverse) == F) install.packages('tidyverse')
+require(tidyverse)
+if(require(igraph) == F) install.packages('igraph')
+require(igraph)
+if(require(tidyr) == F) install.packages('tidyr')
+require(tidyr)
+
+# Definindo a semente para reprodutibilidade
+set.seed(42)
+
+# Agora vamos criar o grafo!
+
+# Importando a node list e a edge list
+load("/Users/rennanpl/r_intro/ga2022.RData")
+
+# Construindo um grafo a partir do dataframe da edge
+g_ga_el <- graph_from_data_frame(ga_el, directed = F)
+plot(g_ga_el)
+
+# Trazendo a coluna res_id2 para frente
+# Cria um vetor com os novos índices das colunas
+new_order <- c(4, 1:3, 5:ncol(ga_res_text_dv))
+
+# Reordena as colunas do dataframe conforme o novo vetor de índices
+ga_res_text_dv <- ga_res_text_dv[, new_order]
+View(ga_res_text_dv)
+
+# Lista de palavras-chave relacionadas à saúde
+palavras_chave <- c("healthcare", "disease", "medicine", "epidemic", "pandemic", "world health organization", "immunodeficiency", "pharmaceutical", "medical", "health insurance")
+
+# Função para contar palavras-chave em um texto
+contar_palavras_chave <- function(texto, palavras_chave) {
+  sum(sapply(palavras_chave, function(palavra) str_count(texto, palavra)))
+}
+
+# Função para contar o total de palavras em um texto
+contar_total_palavras <- function(texto) {
+  strsplit(texto, "\\s+")[[1]] %>% length()
+}
+
+# Criar as variáveis dummy "has_keyword", contar palavras-chave, contar total de palavras e calcular a proporção
+ga_res_text_dv <- ga_res_text_dv %>%
+  rowwise() %>%
+  mutate(
+    has_keyword = ifelse(
+      grepl(paste(palavras_chave, collapse = "|"), content_ed, ignore.case = TRUE),
+      1, 0
+    ),
+    total_keywords = contar_palavras_chave(content_ed, palavras_chave),
+    total_palavras = contar_total_palavras(content_ed),
+    proporcao_keywords = (total_keywords / total_palavras) * 1000
+  ) %>%
+  ungroup()
+
+# Criando um grafo com el + nl
+g_health_text <- graph_from_data_frame(ga_el, directed = T, vertices = ga_res_text_dv)
+
+# Adicionando atributos aos vértices do grafo
+V(g_health_text)$total_keywords <- ga_res_text_dv$total_keywords
+V(g_health_text)$total_palavras <- ga_res_text_dv$total_palavras
+V(g_health_text)$proporcao_keywords <- ga_res_text_dv$proporcao_keywords
+
+# Checagem do número de arestas e de nós
+n_nodes <- vcount(g_health_text)
+n_edges <- ecount(g_health_text)
+
+# DETECÇÃO DE COMUNIDADES
+
+# Criando uma cópia para aplicação do cluster Louvain
+u_health_text <- as.undirected(g_health_text) 
+
+# Aplicando Louvain a g_s13
+comunidade_louvain <- cluster_louvain(u_health_text)
+comunidade_louvain
+
+# Plotando
+plot(comunidade_louvain, u_health_text)
+
+# Membresia
+comunidade_louvain$membership
+V(u_health_text)$name
+
+# Salvando a membresia como atributo dos vértices
+V(u_health_text)$membresia_louvain <- comunidade_louvain$membership
+
+# TABULAÇÃO
+
+# Convertendo o grafo em um dataframe para análise
+vertices_df <- data.frame(
+  identificador = V(u_health_text)$name,
+  total_keywords = V(g_health_text)$total_keywords,
+  total_palavras = V(g_health_text)$total_palavras,
+  proporcao_keywords = V(g_health_text)$proporcao_keywords,
+  membresia_louvain = V(u_health_text)$membresia_louvain
+)
+
+# Debug: Visualizando o dataframe vertices_df
+print(head(vertices_df))
+
+# Agrupando por membresia de cluster e sumarizando o total de palavras-chave, total de palavras e a proporção média de palavras-chave de todos os vértices em um cluster
+cluster_summary <- vertices_df %>%
+  group_by(membresia_louvain) %>%
+  summarise(
+    total_keywords = sum(total_keywords),
+    total_palavras = sum(total_palavras),
+    proporcao_media_keywords = mean(proporcao_keywords)
+  ) %>%
+  ungroup() %>%
+  filter(total_keywords >= 1000) %>%
+  arrange(desc(proporcao_media_keywords)) %>%
+  slice_head(n = 10) # Seleciona os 10 primeiros clusters com maior proporção média de palavras-chave
+
+# Debug: Visualizando o resumo dos clusters
+print(cluster_summary)
+
+# Selecionando os 10 vértices com a maior proporção de palavras-chave dentro de cada cluster
+top_vertices_by_cluster <- vertices_df %>%
+  filter(membresia_louvain %in% cluster_summary$membresia_louvain) %>%
+  group_by(membresia_louvain) %>%
+  arrange(desc(proporcao_keywords)) %>%
+  slice_head(n = 10) %>%
+  ungroup()
+
+# Visualizando os 10 vértices com a maior proporção de palavras-chave por cluster
+View(top_vertices_by_cluster)
+
+# Debug: Visualizando o top_vertices_by_cluster
+print(head(top_vertices_by_cluster))
