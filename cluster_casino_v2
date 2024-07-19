@@ -30,11 +30,11 @@ documents_clusters <- list(
 set.seed(123)
 
 # Função para rodar o algoritmo de detecção de clusters e verificar a presença dos documentos centrais
-cluster_casino_royale <- function(seed, documents_clusters) {
+cluster_casino_royale <- function(seed, documents_clusters) { ### FAÇA seed, graph_object, documents_clusters
   set.seed(seed)
   
   # Carregando os dados e criando o grafo
-  load("/Users/rennanpl/r_intro/ga2022.RData")
+  load("/Users/rennanpl/r_intro/ga2022.RData") ### AO INVÉS: g_ga_el <- graph_object. E CARREGUE O load() FORA DESSA FUNÇÃO, DO CONTRÁRIO É UM load()+criar grafo TODA ITERAÇÃO E ISSO TOMA MAIS TEMPO QUE SÓ CARREGAR UMA VEZ FORA 
   g_ga_el <- graph_from_data_frame(ga_el, directed = F)
   
   # Aplicando Louvain
@@ -67,11 +67,11 @@ cluster_casino_royale <- function(seed, documents_clusters) {
       pull(membresia_louvain)
     
     # Verificando o tamanho do cluster identificado
-    cluster_sizes <- vertices_df %>%
+    cluster_sizes <- vertices_df %>% ### O NOME DO OBJETO É PARECIDO COM O ANTERIOR, PODE CAUSAR CONFUSÃO
       filter(membresia_louvain %in% identified_clusters) %>%
       count(membresia_louvain)
     
-    valid_cluster <- cluster_sizes %>%
+    valid_cluster <- cluster_sizes %>% ### VER COMENTÁRIO ANTERIOR
       mutate(valid = case_when(
         cluster_size == "small" & n <= 1000 ~ TRUE,
         cluster_size == "large" ~ TRUE,
@@ -87,7 +87,7 @@ cluster_casino_royale <- function(seed, documents_clusters) {
     }
   }
   
-  return(valid_clusters)
+  return(valid_clusters) ## É UMA LISTA DE IDS OU DE 1,0 ?
 }
 
 # Função para rodar o algoritmo múltiplas vezes e registrar os resultados
@@ -102,9 +102,9 @@ run_multiple_times <- function(runs, documents_clusters) {
     # Atualizando os resultados
     for (cluster_name in names(documents_clusters)) {
       occurrence <- valid_clusters[[cluster_name]] %>% as.integer()
-      rank_sum <- ifelse(occurrence == 1, 1 / i, 0)
+      rank_sum <- ifelse(occurrence == 1, 1 / i, 0) ### NÃO ESTÁ CLARO PARA MIM O QUE ISSO ESTÁ ESCORANDO
       
-      if (!cluster_name %in% results$Cluster) {
+      if (!cluster_name %in% results$Cluster) { ### O ! NÃO PRECISA ESTAR SUCEDIDO POR PARÊNTESE?; O $CLUSTER FUNCIONA SEM TER SIDO INICIALIZADO JUNTO COM O DF ANTES?
         results <- rbind(results, data.frame(
           Cluster = cluster_name,
           Occurrence = occurrence,
