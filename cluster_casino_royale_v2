@@ -1,159 +1,176 @@
 # CÓDIGO PARA IDENTIFICAÇÃO DOS CLUSTERS EM DIFERENTES RODADAS
 
-# A idéia aqui é analisar o ranking dos clusters proporcionalizados em várias rodadas com diferentes seeds de modo a perceber quais os padrões que mais se repetem
+#A ideia aqui é identificar clusters específicos com base em documentos centrais previamente selecionados e calcular a importância desses clusters em múltiplas execuções do algoritmo, utilizando diferentes sementes. Os resultados incluem a frequência de ocorrência dos clusters, um ranking total e um score de importância relativo para análise.
 
 # Carregando pacotes
-if(require(dplyr) == F) install.packages('dplyr');
-require(dplyr);
-if(require(tidyverse) == F) install.packages('tidyverse');
-require(tidyverse);
-if(require(igraph) == F) install.packages('igraph');
-require(igraph);
-if(require(tidyr) == F) install.packages('tidyr');
-require(tidyr);
+if(require(dplyr) == F) install.packages('dplyr')
+require(dplyr)
+if(require(tidyverse) == F) install.packages('tidyverse')
+require(tidyverse)
+if(require(igraph) == F) install.packages('igraph')
+require(igraph)
+if(require(tidyr) == F) install.packages('tidyr')
+require(tidyr)
 
-# Definindo a semente para reprodutibilidade
-set.seed(477)
-
-# Agora vamos criar o grafo!
-
-# Importando a node list e a edge list
-load("/Users/rennanpl/r_intro/ga2022.RData")
-
-# Construindo um grafo a partir do dataframe da edge
-g_ga_el <- graph_from_data_frame(ga_el, directed = F)
-
-# Trazendo a coluna res_id2 para frente
-# Cria um vetor com os novos índices das colunas
-new_order <- c(4, 1:3, 5:ncol(ga_res_text_dv))
-
-# Reordena as colunas do dataframe conforme o novo vetor de índices
-ga_res_text_dv <- ga_res_text_dv[, new_order]
-
-# Lista de palavras-chave relacionadas à saúde
-palavras_chave <- c("healthcare", "disease", "medicine", "epidemic", "pandemic", "world health organization", "immunodeficiency", "pharmaceutical", "medical", "health insurance")
-
-# Criar a variável dummy "has_keyword"
-ga_res_text_dv <- ga_res_text_dv %>%
-  mutate(has_keyword = ifelse(
-    grepl(paste(palavras_chave, collapse = "|"), content_ed, ignore.case = TRUE),
-    1, 0
-  ))
-
-# Contando quantas células contêm pelo menos uma keyword
-total_has_keyword <- sum(ga_res_text_dv$has_keyword)
-
-# Criando um grafo com el + nl
-g_health_text <- graph_from_data_frame(ga_el, directed = T, vertices = ga_res_text_dv) 
-
-# Checagem do número de arestas e de nós
-n_nodes <- vcount(g_health_text)
-n_edges <- ecount(g_health_text)
-
-#DETECÇÃO DE COMUNIDADES
-
-# Criando uma cópia para aplicação do cluster Louvain
-u_health_text <-as.undirected(g_health_text) 
-
-# Aplicando louvain a g_s13
-cluster_louvain(u_health_text)
-
-# Salvando o objeto communities
-comunidade_louvain <- cluster_louvain(u_health_text)
-
-# Membresia
-comunidade_louvain$membership
-V(u_health_text)$name
-
-# Salvando a membresia como atributo dos vertices
-V(u_health_text)$membresia_louvain <- comunidade_louvain$membership
-
-#TABULAÇÃO
-
-# Convertendo o grafo em um dataframe para análise
-vertices_df <- data.frame(
-  identificador = V(u_health_text)$name,
-  has_keyword = V(g_health_text)$has_keyword,
-  membresia_louvain = V(u_health_text)$membresia_louvain
+# Definindo a tabela de clusters e documentos
+documents_clusters <- list(
+  "Pessoas com Deficiência" = list(docs = c("48/96", "49/153", "48/95", "48/99", "2856 (xxvi)"), size = "small"),
+  "Desenvolvimento Sustentável e Apoio as Nações em Desenvolvimento" = list(docs = c("70/1", "69/313", "55/2", "60/1", "s-26/2"), size = "large"),
+  "Situação dos Direitos Humanos na Republica Árabe Síria" = list(docs = c("66/253 a", "66/253 b", "67/183", "67/262", "70/234"), size = "small"),
+  "Efeitos da Radiação Atômica" = list(docs = c("66/70", "72/76", "73/261", "71/89", "76/75"), size = "small"),
+  "Assistência Econômica e Financeira a Países em Crise e com Desafios de Desenvolvimento" = list(docs = c("32/99", "34/121", "37/151", "38/205", "38/208"), size = "large"),
+  "Questões Jurídico-Institucionais com Enfoque em Direitos Humanos" = list(docs = c("217 a (iii)", "44/25", "2200 a (xxi)", "55/25", "61/295"), size = "large"),
+  "Questões Relacionadas à População Idosa" = list(docs = c("68/134", "75/131", "69/146", "71/164", "72/144"), size = "small"),
+  "Saúde e Segurança dos Assistentes Humanitários e Voluntários das Nações Unidas" = list(docs = c("46/182", "54/192", "55/175", "61/220", "64/75"), size = "small"),
+  "Usos Pacíficos do Espaço Sideral" = list(docs = c("61/111", "62/217", "71/90", "50/27", "65/97"), size = "large"),
+  "Desenvolvimento Social da Juventude" = list(docs = c("50/81", "62/126", "45/103", "56/113", "59/147"), size = "small")
 )
 
-# Criando uma tabela de contingência para explorar a relação entre has_keyword e a membresia
-tabela_contingencia <- vertices_df %>%
-  group_by(membresia_louvain, has_keyword) %>%
-  summarise(count = n(), .groups = 'drop')
-View(tabela_contingencia)
+# Definindo a semente para reprodutibilidade
+set.seed(123)
 
-# Agrupando por membresia de cluster e sumarizando o total de vértices com has_keyword=1 por cluster
-cluster_keyword_summary <- vertices_df %>%
-  group_by(membresia_louvain) %>%
-  summarise(total_has_keyword = sum(has_keyword)) %>%
-  ungroup()
+# Função para rodar o algoritmo de detecção de clusters e verificar a presença dos documentos centrais
+cluster_casino_royale <- function(seed, documents_clusters) {
+  set.seed(seed)
+  
+  # Carregando os dados e criando o grafo
+  load("/Users/rennanpl/r_intro/ga2022.RData")
+  g_ga_el <- graph_from_data_frame(ga_el, directed = F)
+  
+  # Aplicando Louvain
+  u_health_text <- as.undirected(g_ga_el)
+  comunidade_louvain <- cluster_louvain(u_health_text)
+  V(u_health_text)$membresia_louvain <- comunidade_louvain$membership
+  
+  # Convertendo o grafo em um dataframe
+  vertices_df <- data.frame(
+    identificador = V(u_health_text)$name,
+    membresia_louvain = V(u_health_text)$membresia_louvain
+  )
+  
+  # Lista para armazenar os resultados dos clusters válidos
+  valid_clusters <- list()
+  
+  for (cluster_name in names(documents_clusters)) {
+    cluster_info <- documents_clusters[[cluster_name]]
+    documents <- cluster_info$docs
+    cluster_size <- cluster_info$size
+    
+    # Verificando a presença dos documentos centrais no cluster
+    cluster_occurrences <- vertices_df %>%
+      filter(identificador %in% documents) %>%
+      count(membresia_louvain)
+    
+    # Identificando o cluster correspondente
+    identified_clusters <- cluster_occurrences %>%
+      filter(n >= 4) %>%
+      pull(membresia_louvain)
+    
+    # Verificando o tamanho do cluster identificado
+    cluster_sizes <- vertices_df %>%
+      filter(membresia_louvain %in% identified_clusters) %>%
+      count(membresia_louvain)
+    
+    valid_cluster <- cluster_sizes %>%
+      mutate(valid = case_when(
+        cluster_size == "small" & n <= 1000 ~ TRUE,
+        cluster_size == "large" ~ TRUE,
+        TRUE ~ FALSE
+      )) %>%
+      filter(valid == TRUE) %>%
+      pull(membresia_louvain)
+    
+    if (length(valid_cluster) > 0) {
+      valid_clusters[[cluster_name]] <- 1
+    } else {
+      valid_clusters[[cluster_name]] <- 0
+    }
+  }
+  
+  return(valid_clusters)
+}
 
-# Adicionando essa informação de volta ao dataframe original dos vértices
+# Função para rodar o algoritmo múltiplas vezes e registrar os resultados
+run_multiple_times <- function(runs, documents_clusters) {
+  results <- data.frame()
+  seeds <- sample(1:10000, runs)
+  
+  for (i in 1:runs) {
+    seed <- seeds[i]
+    valid_clusters <- cluster_casino_royale(seed, documents_clusters)
+    
+    # Atualizando os resultados
+    for (cluster_name in names(documents_clusters)) {
+      occurrence <- valid_clusters[[cluster_name]] %>% as.integer()
+      rank_sum <- ifelse(occurrence == 1, 1 / i, 0)
+      
+      if (!cluster_name %in% results$Cluster) {
+        results <- rbind(results, data.frame(
+          Cluster = cluster_name,
+          Occurrence = occurrence,
+          Rank_Sum = rank_sum,
+          Seed = seed
+        ))
+      } else {
+        results[results$Cluster == cluster_name, "Occurrence"] <- results[results$Cluster == cluster_name, "Occurrence"] + occurrence
+        results[results$Cluster == cluster_name, "Rank_Sum"] <- results[results$Cluster == cluster_name, "Rank_Sum"] + rank_sum
+      }
+    }
+  }
+  
+  return(results)
+}
 
-# Isso criará uma coluna que indica, para cada vértice, o total de vértices no mesmo cluster que têm as keywords=1
-vertices_df <- vertices_df %>%
-  left_join(cluster_keyword_summary, by = "membresia_louvain")
+# Função para calcular scores e ocorrências
+calculate_scores <- function(results) {
+  score_data <- results %>%
+    group_by(Cluster) %>%
+    summarise(
+      Occurrence = sum(Occurrence),
+      Total_Rank = sum(Rank_Sum),
+      Score = sum(Occurrence) * sum(Rank_Sum)
+    )
+  
+  return(score_data)
+}
 
-# Filtrando apenas os vértices com has_keyword=1 e contando por cluster
-top_clusters_keyword_count <- vertices_df %>%
-  filter(has_keyword == 1) %>%
-  group_by(membresia_louvain) %>%
-  summarise(count_has_keyword_1 = n()) %>%
-  ungroup() %>%
-  arrange(desc(count_has_keyword_1)) %>%
-  slice_head(n = 20) # Seleciona os 20 primeiros
+# Definindo o número de execuções
+runs <- 100
 
-top_clusters_keyword_count
+# Rodando o algoritmo múltiplas vezes
+results <- run_multiple_times(runs, documents_clusters)
 
-# AJUSTE PARA OBTER OS CLUSTERS QUE POSSUEM UMA QUANTIDADE RELATIVA MAIOR DE RESOLUÇÕES DE SAÚDE
+# Calculando os scores e ocorrências
+score_data <- calculate_scores(results)
 
-# Adicionando uma coluna com a contagem total de vértices por cluster
-total_vertices_per_cluster <- vertices_df %>%
-  group_by(membresia_louvain) %>%
-  summarise(total_vertices = n(), .groups = 'drop')
+# Visualizando os resultados
+View(score_data)
 
-# Calculando a proporção de vértices com has_keyword=1 por cluster
-proporcao_keyword_por_cluster <- top_clusters_keyword_count %>%
-  left_join(total_vertices_per_cluster, by = "membresia_louvain") %>%
-  mutate(proportion = count_has_keyword_1 / total_vertices) %>%
-  arrange(desc(proportion)) %>%
-  select(membresia_louvain, proportion)
+# Função para gerar rankings por categoria
+generate_rankings <- function(score_data) {
+  ranking_occurrence <- score_data %>%
+    arrange(desc(Occurrence)) %>%
+    mutate(Rank_Occurrence = row_number())
+  
+  ranking_total_rank <- score_data %>%
+    arrange(Total_Rank) %>%
+    mutate(Rank_Total_Rank = row_number())
+  
+  ranking_score <- score_data %>%
+    arrange(desc(Score)) %>%
+    mutate(Rank_Score = row_number())
+  
+  return(list(
+    Ranking_Occurrence = ranking_occurrence,
+    Ranking_Total_Rank = ranking_total_rank,
+    Ranking_Score = ranking_score
+  ))
+}
 
-# AJustando a seleção dos clusters para focar naqueles com maior proporção
-# ao invés de apenas o número absoluto de keywords
-top_clusters_by_proportion <- proporcao_keyword_por_cluster %>%
-  slice_head(n = 20) # Seleciona os 20 primeiros clusters com maior proporção
+# Gerando os rankings por categoria
+rankings <- generate_rankings(score_data)
 
-# Visualizando os clusters com maior proporção de palavras-chave
-View(top_clusters_by_proportion)
-
-# Criação de mais duas colunas para que se possa observar o total de vértices dentro do cluster de modo a evitar a incidência de falsos-positivos.
-
-# Ajustando o dataframe
-
-# Primeiro, garantindo que temos o total de vértices (total de resoluções) e o total de has_keyword=1 (resoluções has_keyword)
-top_clusters_extended <- top_clusters_by_proportion %>%
-  left_join(cluster_keyword_summary, by = "membresia_louvain") %>%
-  left_join(total_vertices_per_cluster, by = "membresia_louvain")
-
-# Agora, top_clusters_extended tem as colunas adicionais desejadas
-View(top_clusters_extended)
-
-
-
-# PROCURANDO ONDE QUE TÁ O CLUSTER PCD
-documento_cluster_1 <- vertices_df %>%
-  filter(identificador == "48/96")
-
-print(documento_cluster_1)
-
-documento_cluster_2 <- vertices_df %>%
-  filter(identificador == "49/153")
-
-print(documento_cluster_2)
-
-documento_cluster_3 <- vertices_df %>%
-  filter(identificador == "38/111")
-
-print(documento_cluster_3)
+# Visualizando os rankings
+View(rankings$Ranking_Occurrence)
+View(rankings$Ranking_Total_Rank)
+View(rankings$Ranking_Score)
