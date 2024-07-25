@@ -1,7 +1,5 @@
 # CÓDIGO PARA IDENTIFICAÇÃO DOS CLUSTERS EM DIFERENTES RODADAS
 
-#A ideia aqui é identificar clusters específicos com base em documentos centrais previamente selecionados e calcular a importância desses clusters em múltiplas execuções do algoritmo, utilizando diferentes sementes. Os resultados incluem a frequência de ocorrência dos clusters, um ranking total e um score de importância relativo para análise.
-
 # Carregando pacotes
 if(require(dplyr) == F) install.packages('dplyr')
 require(dplyr)
@@ -29,16 +27,16 @@ documents_clusters <- list(
 # Definindo a semente para reprodutibilidade
 set.seed(123)
 
+# Carregando os dados e criando o grafo fora da função (para evitar carregar a cada iteração)
+load("/Users/rennanpl/r_intro/ga2022.RData")
+g_ga_el <- graph_from_data_frame(ga_el, directed = F)
+
 # Função para rodar o algoritmo de detecção de clusters e verificar a presença dos documentos centrais
-cluster_casino_royale <- function(seed, documents_clusters) { ### FAÇA seed, graph_object, documents_clusters
+cluster_casino_royale <- function(seed, graph_object, documents_clusters) { 
   set.seed(seed)
   
-  # Carregando os dados e criando o grafo
-  load("/Users/rennanpl/r_intro/ga2022.RData") ### AO INVÉS: g_ga_el <- graph_object. E CARREGUE O load() FORA DESSA FUNÇÃO, DO CONTRÁRIO É UM load()+criar grafo TODA ITERAÇÃO E ISSO TOMA MAIS TEMPO QUE SÓ CARREGAR UMA VEZ FORA 
-  g_ga_el <- graph_from_data_frame(ga_el, directed = F)
-  
-  # Aplicando Louvain
-  u_health_text <- as.undirected(g_ga_el)
+  # Usando o grafo passado como argumento
+  u_health_text <- as.undirected(graph_object)
   comunidade_louvain <- cluster_louvain(u_health_text)
   V(u_health_text)$membresia_louvain <- comunidade_louvain$membership
   
@@ -48,8 +46,8 @@ cluster_casino_royale <- function(seed, documents_clusters) { ### FAÇA seed, gr
     membresia_louvain = V(u_health_text)$membresia_louvain
   )
   
-  # Lista para armazenar os resultados dos clusters válidos
-  valid_clusters <- list()
+  # Dataframe para armazenar os resultados dos clusters válidos
+  results_df <- data.frame(Cluster = character(), Test_Presence = integer(), Test_Size = integer(), Valid = integer(), Seed = integer(), stringsAsFactors = FALSE)
   
   for (cluster_name in names(documents_clusters)) {
     cluster_info <- documents_clusters[[cluster_name]]
@@ -67,11 +65,11 @@ cluster_casino_royale <- function(seed, documents_clusters) { ### FAÇA seed, gr
       pull(membresia_louvain)
     
     # Verificando o tamanho do cluster identificado
-    cluster_sizes <- vertices_df %>% ### O NOME DO OBJETO É PARECIDO COM O ANTERIOR, PODE CAUSAR CONFUSÃO
+    sizes_of_clusters <- vertices_df %>%
       filter(membresia_louvain %in% identified_clusters) %>%
       count(membresia_louvain)
     
-    valid_cluster <- cluster_sizes %>% ### VER COMENTÁRIO ANTERIOR
+    valid_cluster <- sizes_of_clusters %>%
       mutate(valid = case_when(
         cluster_size == "small" & n <= 1000 ~ TRUE,
         cluster_size == "large" ~ TRUE,
@@ -80,97 +78,84 @@ cluster_casino_royale <- function(seed, documents_clusters) { ### FAÇA seed, gr
       filter(valid == TRUE) %>%
       pull(membresia_louvain)
     
-    if (length(valid_cluster) > 0) {
-      valid_clusters[[cluster_name]] <- 1
-    } else {
-      valid_clusters[[cluster_name]] <- 0
-    }
+    # Verificação de testes
+    test_presence <- ifelse(length(identified_clusters) > 0, 1, 0)
+    test_size <- ifelse(length(valid_cluster) > 0, 1, 0)
+    valid <- ifelse(test_presence == 1 & test_size == 1, 1, 0)
+    
+    # Adicionando resultados ao dataframe
+    results_df <- rbind(results_df, data.frame(Cluster = cluster_name, Test_Presence = test_presence, Test_Size = test_size, Valid = valid, Seed = seed))
   }
   
-  return(valid_clusters) ## É UMA LISTA DE IDS OU DE 1,0 ?
+  return(results_df)
 }
 
-# Função para rodar o algoritmo múltiplas vezes e registrar os resultados
-run_multiple_times <- function(runs, documents_clusters) {
-  results <- data.frame()
+# Função para rodar o algoritmo múltiplas vezes e acumular os resultados
+run_multiple_times <- function(runs, graph_object, documents_clusters) {
+  all_results <- data.frame()
   seeds <- sample(1:10000, runs)
   
   for (i in 1:runs) {
     seed <- seeds[i]
-    valid_clusters <- cluster_casino_royale(seed, documents_clusters)
-    
-    # Atualizando os resultados
-    for (cluster_name in names(documents_clusters)) {
-      occurrence <- valid_clusters[[cluster_name]] %>% as.integer()
-      rank_sum <- ifelse(occurrence == 1, 1 / i, 0) ### NÃO ESTÁ CLARO PARA MIM O QUE ISSO ESTÁ ESCORANDO
-      
-      if (!cluster_name %in% results$Cluster) { ### O ! NÃO PRECISA ESTAR SUCEDIDO POR PARÊNTESE?; O $CLUSTER FUNCIONA SEM TER SIDO INICIALIZADO JUNTO COM O DF ANTES?
-        results <- rbind(results, data.frame(
-          Cluster = cluster_name,
-          Occurrence = occurrence,
-          Rank_Sum = rank_sum,
-          Seed = seed
-        ))
-      } else {
-        results[results$Cluster == cluster_name, "Occurrence"] <- results[results$Cluster == cluster_name, "Occurrence"] + occurrence
-        results[results$Cluster == cluster_name, "Rank_Sum"] <- results[results$Cluster == cluster_name, "Rank_Sum"] + rank_sum
-      }
-    }
+    results_df <- cluster_casino_royale(seed, graph_object, documents_clusters)
+    all_results <- rbind(all_results, results_df)
   }
   
-  return(results)
-}
-
-# Função para calcular scores e ocorrências
-calculate_scores <- function(results) {
-  score_data <- results %>%
-    group_by(Cluster) %>%
-    summarise(
-      Occurrence = sum(Occurrence),
-      Total_Rank = sum(Rank_Sum),
-      Score = sum(Occurrence) * sum(Rank_Sum)
-    )
-  
-  return(score_data)
+  return(all_results)
 }
 
 # Definindo o número de execuções
 runs <- 100
 
-# Rodando o algoritmo múltiplas vezes
-results <- run_multiple_times(runs, documents_clusters)
+# Rodando o algoritmo múltiplas vezes e acumulando os resultados
+all_results <- run_multiple_times(runs, g_ga_el, documents_clusters)
 
-# Calculando os scores e ocorrências
-score_data <- calculate_scores(results)
+# Visualizando os resultados finais
+View(all_results)
 
-# Visualizando os resultados
-View(score_data)
+# Função para calcular o desempenho dos clusters
+calculate_performance <- function(results) {
+  performance <- results %>%
+    group_by(Cluster) %>%
+    summarise(
+      Frequency = sum(Valid),
+      Rank_Sum = sum(ifelse(Valid == 1, 1 / row_number(), 0)),
+      Score = sum(ifelse(Valid == 1, 1 / row_number(), 0)) * sum(Valid)
+    )
+  return(performance)
+}
 
-# Função para gerar rankings por categoria
-generate_rankings <- function(score_data) {
-  ranking_occurrence <- score_data %>%
-    arrange(desc(Occurrence)) %>%
-    mutate(Rank_Occurrence = row_number())
+# Calculando o desempenho dos clusters
+performance <- calculate_performance(all_results)
+
+# Visualizando o desempenho dos clusters
+View(performance)
+
+# Função para gerar tabelas de ranking por categoria
+generate_rankings <- function(performance) {
+  ranking_frequency <- performance %>%
+    arrange(desc(Frequency)) %>%
+    mutate(Rank_Frequency = row_number())
   
-  ranking_total_rank <- score_data %>%
-    arrange(Total_Rank) %>%
-    mutate(Rank_Total_Rank = row_number())
+  ranking_rank_sum <- performance %>%
+    arrange(Rank_Sum) %>%
+    mutate(Rank_Rank_Sum = row_number())
   
-  ranking_score <- score_data %>%
+  ranking_score <- performance %>%
     arrange(desc(Score)) %>%
     mutate(Rank_Score = row_number())
   
   return(list(
-    Ranking_Occurrence = ranking_occurrence,
-    Ranking_Total_Rank = ranking_total_rank,
+    Ranking_Frequency = ranking_frequency,
+    Ranking_Rank_Sum = ranking_rank_sum,
     Ranking_Score = ranking_score
   ))
 }
 
 # Gerando os rankings por categoria
-rankings <- generate_rankings(score_data)
+rankings <- generate_rankings(performance)
 
 # Visualizando os rankings
-View(rankings$Ranking_Occurrence)
-View(rankings$Ranking_Total_Rank)
+View(rankings$Ranking_Frequency)
+View(rankings$Ranking_Rank_Sum)
 View(rankings$Ranking_Score)
