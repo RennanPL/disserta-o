@@ -1,0 +1,297 @@
+# Carregando pacotes necessários
+if(require(dplyr) == F) install.packages('dplyr');
+require(dplyr);
+if(require(igraph) == F) install.packages('igraph');
+require(igraph);
+
+# Definindo a semente para reprodutibilidade
+set.seed(123)
+
+# Carregando os dados
+load("/Users/rennanpl/r_intro/ga2022.RData")
+
+# Trazendo a coluna res_id2 para frente
+# Cria um vetor com os novos índices das colunas
+new_order <- c(4, 1:3, 5:ncol(ga_res_text_dv))
+
+# Reordena as colunas do dataframe conforme o novo vetor de índices
+ga_res_text_dv <- ga_res_text_dv[, new_order]
+
+# Lista de palavras-chave relacionadas à saúde
+palavras_chave <- c("healthcare", "disease", "medicine", "epidemic", "pandemic", 
+                    "world health organization", "immunodeficiency", "pharmaceutical", 
+                    "medical", "health insurance")
+
+# Criar a variável dummy "has_keyword" no dataframe de vértices
+ga_res_text_dv <- ga_res_text_dv %>%
+  mutate(has_keyword = ifelse(
+    grepl(paste(palavras_chave, collapse = "|"), content_ed, ignore.case = TRUE),
+    1, 0
+  ))
+
+# Verificando se todos os vértices na lista de arestas estão presentes na lista de vértices
+vertices_na_edge_list <- unique(c(ga_el$res_id2_doc_giving_cite, ga_el$res_id2_doc_receiv_cite))
+missing_vertices <- setdiff(vertices_na_edge_list, ga_res_text_dv$res_id2)
+
+#Adicionando os vértices ausentes na lista de NA como atributo
+if (length(missing_vertices) > 0) {
+  missing_df <- data.frame(res_id2 = missing_vertices, has_keyword = NA)
+  ga_res_text_dv <- rbind(ga_res_text_dv, missing_df)
+}
+
+# Contando quantos NAs foram inseridos na coluna has_keyword
+num_NAs <- sum(is.na(ga_res_text_dv$has_keyword))
+print(paste("Número de NAs na coluna 'has_keyword':", num_NAs))
+
+# Construindo o grafo com os dados de vértices e arestas
+g_ga_el <- graph_from_data_frame(ga_el, directed = F, vertices = ga_res_text_dv)
+
+# Definindo a tabela de clusters e documentos
+documents_clusters <- list(
+  "Pessoas com Deficiência" = list(docs = c("48/96", "49/153", "48/95", "48/99", "2856 (xxvi)"), size = "small"),
+  "Desenvolvimento Sustentável e Apoio as Nações em Desenvolvimento" = list(docs = c("70/1", "69/313", "55/2", "60/1", "s-26/2"), size = "large"),
+  "Situação dos Direitos Humanos na Republica Árabe Síria" = list(docs = c("66/253 a", "66/253 b", "67/183", "67/262", "70/234"), size = "small"),
+  "Efeitos da Radiação Atômica" = list(docs = c("66/70", "72/76", "73/261", "71/89", "76/75"), size = "small"),
+  "Assistência Econômica e Financeira a Países em Crise e com Desafios de Desenvolvimento" = list(docs = c("32/99", "34/121", "37/151", "38/205", "38/208"), size = "large"),
+  "Questões Jurídico-Institucionais com Enfoque em Direitos Humanos" = list(docs = c("217 a (iii)", "44/25", "2200 a (xxi)", "55/25", "61/295"), size = "large"),
+  "Questões Relacionadas à População Idosa" = list(docs = c("68/134", "75/131", "69/146", "71/164", "72/144"), size = "small"),
+  "Saúde e Segurança dos Assistentes Humanitários e Voluntários das Nações Unidas" = list(docs = c("46/182", "54/192", "55/175", "61/220", "64/75"), size = "small"),
+  "Usos Pacíficos do Espaço Sideral" = list(docs = c("61/111", "62/217", "71/90", "50/27", "65/97"), size = "large"),
+  "Desenvolvimento Social da Juventude" = list(docs = c("50/81", "62/126", "45/103", "56/113", "59/147"), size = "small")
+)
+
+# Função para rodar o algoritmo de detecção de clusters e calcular a proporção de documentos de saúde (has_keyword = 1)
+calculate_cluster_proportion <- function(seed, graph_object, documents_clusters) { 
+  set.seed(seed)
+  
+  # Criando o grafo não direcionado e aplicando o algoritmo Louvain
+  u_health_text <- as.undirected(graph_object)
+  comunidade_louvain <- cluster_louvain(u_health_text)
+  V(u_health_text)$membresia_louvain <- comunidade_louvain$membership
+  
+  # Convertendo o grafo em um dataframe
+  vertices_df <- data.frame(
+    identificador = V(u_health_text)$name,
+    membresia_louvain = V(u_health_text)$membresia_louvain,
+    has_keyword = V(graph_object)$has_keyword
+  )
+  
+  # Dataframe para armazenar os resultados dos clusters válidos
+  results_df <- data.frame(Cluster = character(), Cluster_Proportion = numeric(), Seed = integer(), stringsAsFactors = FALSE)
+  
+  # Loop para cada cluster na lista de documentos
+  for (cluster_name in names(documents_clusters)) {
+    cluster_info <- documents_clusters[[cluster_name]]
+    documents <- cluster_info$docs
+    cluster_size <- cluster_info$size
+    
+    # Verificando a presença dos documentos centrais no cluster
+    cluster_occurrences <- vertices_df %>%
+      filter(identificador %in% documents) %>%
+      count(membresia_louvain)
+    
+    # Identificando o cluster correspondente
+    identified_clusters <- cluster_occurrences %>%
+      filter(n >= 4) %>%
+      pull(membresia_louvain)
+    
+    # Verificando o tamanho do cluster identificado
+    if (length(identified_clusters) > 0) {
+      for (cluster_id in identified_clusters) {
+        cluster_vertices <- vertices_df %>%
+          filter(membresia_louvain == cluster_id)
+        
+        valid_cluster <- nrow(cluster_vertices)
+        
+        if ((cluster_size == "small" & valid_cluster <= 1000) | cluster_size == "large") {
+          # Calculando a proporção de has_keyword = 1 no cluster identificado
+          cluster_proportion <- mean(cluster_vertices$has_keyword, na.rm = TRUE)
+          
+          # Adicionando resultados ao dataframe
+          results_df <- rbind(results_df, data.frame(Cluster = cluster_name, Cluster_Proportion = cluster_proportion, Seed = seed))
+        }
+      }
+    }
+  }
+  
+  return(results_df)
+}
+
+# Função para rodar o algoritmo múltiplas vezes e acumular os resultados
+run_multiple_times <- function(runs, graph_object, documents_clusters) {
+  all_results <- data.frame()
+  seeds <- sample(1:10000, runs)
+  
+  for (i in 1:runs) {
+    seed <- seeds[i]
+    results_df <- calculate_cluster_proportion(seed, graph_object, documents_clusters)
+    all_results <- rbind(all_results, results_df)
+  }
+  
+  return(all_results)
+}
+
+# Rodando o algoritmo múltiplas vezes e acumulando os resultados
+all_results <- run_multiple_times(100, g_ga_el, documents_clusters)
+
+# Calculando a média das proporções para cada cluster
+average_proportion <- all_results %>%
+  group_by(Cluster) %>%
+  summarise(health_proportion = mean(Cluster_Proportion, na.rm = TRUE)) %>%
+  ungroup()
+
+# Visualizando a proporção média dos clusters
+View(average_proportion)
+
+
+
+
+
+
+
+
+
+# CÓDIGO PARA IDENTIFICAÇÃO DOS CLUSTERS EM DIFERENTES RODADAS
+
+# Carregando pacotes
+if(require(dplyr) == F) install.packages('dplyr')
+require(dplyr)
+if(require(tidyverse) == F) install.packages('tidyverse')
+require(tidyverse)
+if(require(igraph) == F) install.packages('igraph')
+require(igraph)
+if(require(tidyr) == F) install.packages('tidyr')
+require(tidyr)
+
+# Definindo a tabela de clusters e documentos
+documents_clusters <- list(
+  "Pessoas com Deficiência" = list(docs = c("48/96", "49/153", "48/95", "48/99", "2856 (xxvi)"), size = "small"),
+  "Desenvolvimento Sustentável e Apoio as Nações em Desenvolvimento" = list(docs = c("70/1", "69/313", "55/2", "60/1", "s-26/2"), size = "large"),
+  "Situação dos Direitos Humanos na Republica Árabe Síria" = list(docs = c("66/253 a", "66/253 b", "67/183", "67/262", "70/234"), size = "small"),
+  "Efeitos da Radiação Atômica" = list(docs = c("66/70", "72/76", "73/261", "71/89", "76/75"), size = "small"),
+  "Assistência Econômica e Financeira a Países em Crise e com Desafios de Desenvolvimento" = list(docs = c("32/99", "34/121", "37/151", "38/205", "38/208"), size = "large"),
+  "Questões Jurídico-Institucionais com Enfoque em Direitos Humanos" = list(docs = c("217 a (iii)", "44/25", "2200 a (xxi)", "55/25", "61/295"), size = "large"),
+  "Questões Relacionadas à População Idosa" = list(docs = c("68/134", "75/131", "69/146", "71/164", "72/144"), size = "small"),
+  "Saúde e Segurança dos Assistentes Humanitários e Voluntários das Nações Unidas" = list(docs = c("46/182", "54/192", "55/175", "61/220", "64/75"), size = "small"),
+  "Usos Pacíficos do Espaço Sideral" = list(docs = c("61/111", "62/217", "71/90", "50/27", "65/97"), size = "large"),
+  "Desenvolvimento Social da Juventude" = list(docs = c("50/81", "62/126", "45/103", "56/113", "59/147"), size = "small")
+)
+
+# Definindo a semente para reprodutibilidade
+set.seed(123)
+
+# Carregando os dados e criando o grafo fora da função (para evitar carregar a cada iteração)
+load("/Users/rennanpl/r_intro/ga2022.RData")
+g_ga_el <- graph_from_data_frame(ga_el, directed = F)
+
+# Função para rodar o algoritmo de detecção de clusters e verificar a presença dos documentos centrais
+cluster_casino_royale <- function(seed, graph_object, documents_clusters) { 
+  set.seed(seed)
+  
+  # Usando o grafo passado como argumento
+  u_health_text <- as.undirected(graph_object)
+  comunidade_louvain <- cluster_louvain(u_health_text)
+  V(u_health_text)$membresia_louvain <- comunidade_louvain$membership
+  
+  # Convertendo o grafo em um dataframe
+  vertices_df <- data.frame(
+    identificador = V(u_health_text)$name,
+    membresia_louvain = V(u_health_text)$membresia_louvain
+  )
+  
+  # Dataframe para armazenar os resultados dos clusters válidos
+  results_df <- data.frame(Cluster = character(), Test_Presence = integer(), Test_Size = integer(), Valid = integer(), Seed = integer(), stringsAsFactors = FALSE)
+  
+  for (cluster_name in names(documents_clusters)) {
+    cluster_info <- documents_clusters[[cluster_name]]
+    documents <- cluster_info$docs
+    cluster_size <- cluster_info$size
+    
+    # Verificando a presença dos documentos centrais no cluster
+    cluster_occurrences <- vertices_df %>%
+      filter(identificador %in% documents) %>%
+      count(membresia_louvain)
+    
+    # Identificando o cluster correspondente
+    identified_clusters <- cluster_occurrences %>%
+      filter(n >= 4) %>%
+      pull(membresia_louvain)
+    
+    # Verificando o tamanho do cluster identificado
+    sizes_of_clusters <- vertices_df %>%
+      filter(membresia_louvain %in% identified_clusters) %>%
+      count(membresia_louvain)
+    
+    valid_cluster <- sizes_of_clusters %>%
+      mutate(valid = case_when(
+        cluster_size == "small" & n <= 1000 ~ TRUE,
+        cluster_size == "large" ~ TRUE,
+        TRUE ~ FALSE
+      )) %>%
+      filter(valid == TRUE) %>%
+      pull(membresia_louvain)
+    
+    # Verificação de testes
+    test_presence <- ifelse(length(identified_clusters) > 0, 1, 0)
+    test_size <- ifelse(length(valid_cluster) > 0, 1, 0)
+    valid <- ifelse(test_presence == 1 & test_size == 1, 1, 0)
+    
+    # Adicionando resultados ao dataframe
+    results_df <- rbind(results_df, data.frame(Cluster = cluster_name, Test_Presence = test_presence, Test_Size = test_size, Valid = valid, Seed = seed))
+  }
+  
+  return(results_df)
+}
+
+# Função para rodar o algoritmo múltiplas vezes e acumular os resultados
+run_multiple_times <- function(runs, graph_object, documents_clusters) {
+  all_results <- data.frame()
+  seeds <- sample(1:10000, runs)
+  
+  for (i in 1:runs) {
+    seed <- seeds[i]
+    results_df <- cluster_casino_royale(seed, graph_object, documents_clusters)
+    all_results <- rbind(all_results, results_df)
+  }
+  
+  return(all_results)
+}
+
+# Definindo o número de execuções
+runs <- 100
+
+# Rodando o algoritmo múltiplas vezes e acumulando os resultados
+all_results <- run_multiple_times(runs, g_ga_el, documents_clusters)
+
+# Visualizando os resultados finais
+View(all_results)
+
+# Função para calcular o desempenho dos clusters
+calculate_performance <- function(results) {
+  performance <- results %>%
+    group_by(Cluster) %>%
+    summarise(
+      Frequency = sum(Valid),
+      Rank_Sum = sum(ifelse(Valid == 1, 1 / row_number(), 0)),
+    )
+  return(performance)
+}
+
+# Calculando o desempenho dos clusters
+performance <- calculate_performance(all_results)
+
+# Visualizando o desempenho dos clusters
+View(performance)
+
+# Merge dos dataframes average_proportion e performance
+final_results <- merge(average_proportion, performance, by = "Cluster")
+
+
+# Criando uma nova coluna com um score que multiplica a frequência pelo proportion
+
+# Adicionando a nova coluna de score que multiplica a frequência pela proporção
+final_results <- final_results %>%
+  mutate(weighted_proportion = Frequency * health_proportion)
+
+# Visualizando os resultados finais com a nova coluna de score
+View(final_results)w
