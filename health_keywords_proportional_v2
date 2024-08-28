@@ -137,3 +137,36 @@ top_clusters_extended <- top_clusters_by_proportion %>%
 
 # Agora, top_clusters_extended tem as colunas adicionais desejadas
 View(top_clusters_extended)
+
+# ALGUMAS PEQUENAS ANÁLISES ADICIONAIS
+
+# Quantos clusters foram encontrados na rede toda
+
+num_clusters <- length(unique(comunidade_louvain$membership))
+print(num_clusters)
+
+# Quais os maiores clusters da rede
+
+maiores_clusters <- total_vertices_per_cluster %>%
+  arrange(desc(total_vertices)) %>%
+  slice_head(n = 10)  # Selecionando os 10 maiores clusters
+print(maiores_clusters)
+
+# Média e Desvio Padrão do número de clusters após 10 rodadas do algorítmo
+
+# Dados fornecidos
+valores <- c(2533, 2524, 2541, 2534, 2534, 2538, 2539, 2532, 2541, 2538)
+
+# Cálculo da média
+media <- mean(valores)
+
+# Cálculo da variância
+variancia <- var(valores)
+
+# Cálculo do desvio padrão
+desvio_padrao <- sd(valores)
+
+# Exibindo os resultados
+cat("Média:", media, "\n")
+cat("Variância:", variancia, "\n")
+cat("Desvio Padrão:", desvio_padrao, "\n")
